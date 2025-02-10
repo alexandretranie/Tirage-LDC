@@ -1,5 +1,5 @@
 ############################################ IMPORTS ############################################
-using Gurobi, JuMP, CSV, DataFrames, Random, Base.Threads, Logging
+using Gurobi, JuMP, CSV, DataFrames, Random, Base.Threads, Logging, SCIP
 ####################################### CONFIG VARIABLES #######################################
 const SOLVER = "Gurobi" # Alternative: "Gurobi"
 const LEAGUE = "CHAMPIONS_LEAGUE" # Alternative: "EUROPA_LEAGUE"

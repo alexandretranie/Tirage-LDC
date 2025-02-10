@@ -216,6 +216,18 @@ interface Match {
       cursor: pointer;
     }
 
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin: 2rem auto;  
+    }
+
+    .active-team {
+    background-color: green; 
+    color: white;            
+    }
+
     .auto-label {
       color: white;
       font-size: 1rem;
@@ -233,7 +245,7 @@ interface Match {
         class="draw-button"
         [disabled]="waitingForInput || updateInProgress"
       >
-        <span>{{isDrawing ? 'Continue the drawing' : 'Start the drawing'}}</span>
+        <span>{{isDrawing ? 'Continue the draw' : 'Start the draw'}}</span>
         <div class="loading-spinner" *ngIf="waitingForInput || updateInProgress"></div> 
       </button>
       <button 
@@ -243,15 +255,32 @@ interface Match {
       >
         Export to CSV
       </button>
-      <div class="auto-mode">
-        <input 
-          type="checkbox" 
-          id="autoMode" 
-          [(ngModel)]="autoMode"
-          class="auto-checkbox"
-        >
-        <label for="autoMode" class="auto-label">Auto mode</label>
+      <div class="checkbox-group">
+        <div class="auto-mode">
+          <input 
+            type="checkbox" 
+            id="autoMode" 
+            [(ngModel)]="autoMode"
+            class="auto-checkbox"
+            (change)="onAutoModeChange($event)"
+          >
+          <label for="autoMode" class="auto-label">Auto mode</label>
+        </div>
+        <div class="auto-mode">
+          <input 
+            type="checkbox" 
+            id="regulateMode" 
+            [(ngModel)]="regulateMode"
+            class="auto-checkbox"
+            (change)="onRegulateModeChange($event)"
+          >
+          <label for="regulateMode" class="auto-label">Regulate mode</label>
+        </div>
       </div>
+  
+      
+
+
 
       <div class="tables-row">
         <!-- Première ligne : Pots 1 et 2 -->
@@ -280,7 +309,7 @@ interface Match {
             </thead>
             <tbody>
               <tr *ngFor="let team of pot; let teamIndex = index">
-                <td class="team-column">{{team}}</td>
+                <td class="team-column" [class.active-team]="team === activeTeam">{{team}}</td>
                 <td [class.highlight]="isRecentMatch(potIndex, teamIndex, 0, true)">
                 {{getOpponent(potIndex, teamIndex, 0, true)}}
                 </td>
@@ -381,8 +410,11 @@ export class SequentialDraw implements OnInit, OnDestroy{
   highlightTimeout: any = null;
   updateInProgress = false;
   autoMode = false;
+  regulateMode = false;
   private autoModeTimeout: any = null;
   Object = Object;
+
+  activeTeam: string | null = null;
 
   pots = [
     ["Real", "ManCity", "Bayern", "PSG", "Liverpool", "Inter", "Dortmund", "Leipzig", "Barcelona"],
@@ -405,6 +437,26 @@ export class SequentialDraw implements OnInit, OnDestroy{
       console.log('Envoi de la commande continue');
       this.waitingForInput = true;
       this.terminalService.continueDraw();
+    }
+  }
+
+  onAutoModeChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    // Mettez à jour autoMode selon la valeur cochée
+    this.autoMode = input.checked;
+    // Si autoMode est activé, désactivez regulateMode
+    if (this.autoMode) {
+      this.regulateMode = false;
+    }
+  }
+
+  onRegulateModeChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const checked = input.checked;
+    this.regulateMode = checked;
+    if (checked) {
+      // Désactive le mode Auto
+      this.autoMode = false;
     }
   }
 
@@ -480,30 +532,33 @@ ngOnInit() {
           this.updateInProgress = false;
           this.waitingForInput = false;
           
-          if (this.autoMode) {
+          if (this.autoMode || this.regulateMode) {
+            const delay = this.regulateMode ? 1000 : 10;
             this.autoModeTimeout = setTimeout(() => {
               if (this.isDrawing && !this.updateInProgress) {
                 this.handleDraw();
               }
-            }, 10);
+            }, delay);
           }
         }
       } else if (message.type === 'wait_for_input') {
         if (!this.updateInProgress) {
           this.waitingForInput = false;
           
-          if (this.autoMode) {
+          if (this.autoMode || this.regulateMode) {
+            const delay = this.regulateMode ? 1000 : 10;
             this.autoModeTimeout = setTimeout(() => {
               if (this.isDrawing && !this.updateInProgress) {
                 this.handleDraw();
               }
-            }, 10);
+            }, delay);
           }
         }
       }
     }
   );
 }
+
 
 private parseMatchData(data: string): Match | null {
     console.log("Data à parser:", data);
@@ -547,6 +602,8 @@ private parseMatchData(data: string): Match | null {
 private updateMatches(match: Match) {
     const key = `${match.selectedTeam}-${match.selectedPot}`;
     this.matches[key] = match;
+
+    this.activeTeam = match.selectedTeam;
     
     this.recentMatch = match;
     
@@ -578,3 +635,6 @@ ngOnDestroy() {
   }
 }
 }
+
+
+
